@@ -185,16 +185,6 @@ export function AppointmentsClient({
                                 {timeLabel(appointment.end, timezone)}
                               </p>
                             </div>
-                            {(appointment.htmlLink || googleCalendarUrl) && (
-                              <a
-                                href={appointment.htmlLink || googleCalendarUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-xs font-semibold text-brand-text hover:underline"
-                              >
-                                Abrir
-                              </a>
-                            )}
                           </div>
                         ))}
                       </div>
