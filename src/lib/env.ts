@@ -40,7 +40,7 @@ const envSchema = z.object({
   GOOGLE_CALENDAR_WEB_URL: z
     .string()
     .url()
-    .default("https://calendar.google.com/calendar/u/0/r"),
+    .default("https://calendar.google.com/calendar/r"),
   // 016: atribucion de anuncios y reporte a la Conversions API de Meta.
   // Apagada por defecto: sin ella no se captura de que anuncio vino una
   // conversacion, no se le reporta nada a Meta y la superficie da 404.
