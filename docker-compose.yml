@@ -40,6 +40,10 @@ services:
       # Opcionales: vacías = apagadas (guía de cada una en .env.example).
       CHANNELS: ${CHANNELS:-}
       AGENDA: ${AGENDA:-}
+      N8N_CALENDAR_FEED_URL: ${N8N_CALENDAR_FEED_URL:-}
+      N8N_CALENDAR_FEED_TOKEN: ${N8N_CALENDAR_FEED_TOKEN:-}
+      EXTERNAL_CALENDAR_TIMEZONE: ${EXTERNAL_CALENDAR_TIMEZONE:-America/New_York}
+      GOOGLE_CALENDAR_WEB_URL: ${GOOGLE_CALENDAR_WEB_URL:-https://calendar.google.com/calendar/u/0/r}
       ATRIBUCION: ${ATRIBUCION:-}
       BOT_API_KEY: ${BOT_API_KEY:-}
       BRAIN_HEALTH_URL: ${BRAIN_HEALTH_URL:-}
