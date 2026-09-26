@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 import { newId } from "@/lib/db/ids";
 import { graphRequest, MetaApiError, normalizeRecipient } from "@/lib/meta/client";
@@ -290,6 +290,44 @@ async function persistOutbound(input: {
   return message.id;
 }
 
+/**
+ * Un mensaje enviado manualmente desde la Bandeja significa que un humano
+ * tomó la conversación. Pausamos la IA DESPUÉS de que el envío fue aceptado
+ * y persistido, para no dejar una conversación en handoff por un mensaje que
+ * nunca salió.
+ *
+ * No pisa un handoff previo: si ya estaba pausada conserva hora y motivo.
+ */
+async function pauseAiAfterOperatorSend(
+  organizationId: string,
+  conversationId: string
+): Promise<void> {
+  const db = getDb();
+  const paused = await db
+    .update(schema.conversation)
+    .set({
+      aiEnabled: false,
+      handoffAt: new Date(),
+      handoffReason: "manual_reply",
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(schema.conversation.organizationId, organizationId),
+        eq(schema.conversation.id, conversationId),
+        isNull(schema.conversation.handoffAt)
+      )
+    )
+    .returning({ id: schema.conversation.id });
+
+  if (paused[0]) {
+    publish(organizationId, {
+      type: "conversation.updated",
+      data: { conversation: { id: conversationId } },
+    });
+  }
+}
+
 /** Envía un mensaje de texto libre por WhatsApp. */
 export async function sendText(input: {
   conversationId: string;
@@ -326,6 +364,12 @@ export async function sendText(input: {
     aiGenerated: input.aiGenerated,
     origin: input.aiGenerated ? "ai" : "operator",
   });
+
+  // El cerebro externo llama sendText con aiGenerated=true. Solo una
+  // respuesta escrita por una persona desde la Bandeja toma el control.
+  if (!input.aiGenerated) {
+    await pauseAiAfterOperatorSend(input.organizationId, input.conversationId);
+  }
 
   return { messageId };
 }
@@ -408,6 +452,7 @@ export async function sendMediaMessage(input: {
       mediaAssetId: assetId,
       media: asset,
     });
+    await pauseAiAfterOperatorSend(input.organizationId, input.conversationId);
     return { messageId };
   } catch (err) {
     let sendErr: SendError;
@@ -516,6 +561,7 @@ export async function sendStructured(
     mediaAssetId: asset.id,
     media: asset,
   });
+  await pauseAiAfterOperatorSend(input.organizationId, input.conversationId);
   return { messageId };
 }
 
