@@ -33,6 +33,14 @@ const envSchema = z.object({
   // 015: motor de agenda. Apagado por defecto — sin el, toda la superficie de
   // agenda responde 404 y la UI no la menciona. Ej.: AGENDA=on
   AGENDA: z.string().optional(),
+  // Vista read-only de citas externas: n8n consulta el Google Calendar real.
+  N8N_CALENDAR_FEED_URL: z.string().url().optional(),
+  N8N_CALENDAR_FEED_TOKEN: z.string().min(16).optional(),
+  EXTERNAL_CALENDAR_TIMEZONE: z.string().default("America/New_York"),
+  GOOGLE_CALENDAR_WEB_URL: z
+    .string()
+    .url()
+    .default("https://calendar.google.com/calendar/u/0/r"),
   // 016: atribucion de anuncios y reporte a la Conversions API de Meta.
   // Apagada por defecto: sin ella no se captura de que anuncio vino una
   // conversacion, no se le reporta nada a Meta y la superficie da 404.
