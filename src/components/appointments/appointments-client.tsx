@@ -36,12 +36,33 @@ function dayKey(iso: string, timezone: string) {
 }
 
 function dayLabel(iso: string, timezone: string) {
-  return new Intl.DateTimeFormat("es-US", {
+  const label = new Intl.DateTimeFormat("es-US", {
     timeZone: timezone,
     weekday: "long",
     month: "long",
     day: "numeric",
   }).format(new Date(iso));
+
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+function displayTimezone(timezone: string) {
+  return timezone === "America/New_York" ? "Hora de Miami" : timezone;
+}
+
+function appointmentTitleParts(title: string) {
+  const [name, ...serviceParts] = title.split(" - ");
+  return {
+    name: name?.trim() || "Cita",
+    service: serviceParts.join(" - ").trim(),
+  };
+}
+
+function statusLabel(status?: string | null) {
+  if (status === "confirmed") return "Confirmada";
+  if (status === "tentative") return "Pendiente";
+  if (status === "cancelled") return "Cancelada";
+  return null;
 }
 
 function timeLabel(iso: string, timezone: string) {
@@ -110,7 +131,7 @@ export function AppointmentsClient({
         <div className="min-w-0 flex-1">
           <h2 className="text-[17px] font-bold tracking-tight">Citas</h2>
           <p className="mt-0.5 text-xs text-text-3">
-            Google Calendar es la fuente de verdad · {timezone}
+            Calendario de citas · {displayTimezone(timezone)}
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}>
@@ -130,8 +151,7 @@ export function AppointmentsClient({
           <CardHeader>
             <CardTitle>Próximas citas</CardTitle>
             <CardDescription>
-              Vista de solo lectura del mismo calendario que usa la automatización.
-              Reprogramar o cancelar se sigue haciendo manualmente en Google Calendar.
+              Se actualiza desde Google Calendar. Para reprogramar o cancelar, usa Google Calendar.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -164,29 +184,44 @@ export function AppointmentsClient({
 
                   return (
                     <section key={day}>
-                      <h3 className="mb-2 text-sm font-bold capitalize">
+                      <h3 className="mb-2 text-sm font-bold">
                         {dayLabel(first.start, timezone)}
                       </h3>
                       <div className="divide-y divide-border rounded-md border border-border">
-                        {items.map((appointment) => (
-                          <div
-                            key={appointment.id}
-                            className="flex flex-wrap items-center gap-3 px-4 py-3"
-                          >
-                            <div className="w-28 shrink-0 text-sm font-semibold">
-                              {timeLabel(appointment.start, timezone)}
+                        {items.map((appointment) => {
+                          const { name, service } = appointmentTitleParts(
+                            appointment.title || "Cita"
+                          );
+                          const status = statusLabel(appointment.status);
+
+                          return (
+                            <div
+                              key={appointment.id}
+                              className="flex flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3.5"
+                            >
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-sm font-semibold">{name}</p>
+                                {service && (
+                                  <p className="mt-0.5 truncate text-xs text-text-3">
+                                    {service}
+                                  </p>
+                                )}
+                              </div>
+
+                              <div className="flex shrink-0 items-center gap-3">
+                                <span className="text-sm font-medium">
+                                  {timeLabel(appointment.start, timezone)} –{" "}
+                                  {timeLabel(appointment.end, timezone)}
+                                </span>
+                                {status && (
+                                  <span className="rounded-full border border-border bg-subtle px-2.5 py-1 text-[11px] font-semibold text-text-2">
+                                    {status}
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate text-sm font-semibold">
-                                {appointment.title || "Cita"}
-                              </p>
-                              <p className="text-xs text-text-3">
-                                {timeLabel(appointment.start, timezone)} –{" "}
-                                {timeLabel(appointment.end, timezone)}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </section>
                   );
