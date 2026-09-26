@@ -17,6 +17,44 @@ import type { MessageDto, MessageMediaDto } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { formatBytes, mediaLabel } from "./helpers";
 
+/**
+ * Vista del formato de texto que entiende WhatsApp. El valor almacenado NO se
+ * modifica: seguimos enviando *negrita*, _cursiva_ y ~tachado~ tal cual a
+ * Meta, pero la Bandeja lo presenta como lo verá el cliente.
+ *
+ * Es deliberadamente pequeño y seguro: crea nodos React, nunca HTML crudo.
+ */
+function WhatsAppText({
+  text,
+  className,
+}: {
+  text: string | null;
+  className?: string;
+}) {
+  if (!text) return null;
+  const parts = text.split(/(\*\*[^*\n]+\*\*|\*[^*\n]+\*|_[^_\n]+_|~[^~\n]+~)/g);
+
+  return (
+    <span className={className}>
+      {parts.map((part, i) => {
+        if (part.length >= 4 && part.startsWith("**") && part.endsWith("**")) {
+          return <strong key={i}>{part.slice(2, -2)}</strong>;
+        }
+        if (part.length >= 3 && part.startsWith("*") && part.endsWith("*")) {
+          return <strong key={i}>{part.slice(1, -1)}</strong>;
+        }
+        if (part.length >= 3 && part.startsWith("_") && part.endsWith("_")) {
+          return <em key={i}>{part.slice(1, -1)}</em>;
+        }
+        if (part.length >= 3 && part.startsWith("~") && part.endsWith("~")) {
+          return <s key={i}>{part.slice(1, -1)}</s>;
+        }
+        return <span key={i}>{part}</span>;
+      })}
+    </span>
+  );
+}
+
 function StatusTicks({ status }: { status: MessageDto["status"] }) {
   const cls = "h-[13px] w-[13px]";
   if (status === "pending") return <Clock3 className={cn(cls, "text-text-4")} strokeWidth={1.7} />;
@@ -238,15 +276,17 @@ export function MessageThread({ messages }: { messages: MessageDto[] }) {
                   <span className="block">
                     <MediaBlock media={m.media} />
                     {m.media.caption && (
-                      <span className="mt-1 block whitespace-pre-wrap break-words">
-                        {m.media.caption}
-                      </span>
+                      <WhatsAppText
+                        text={m.media.caption}
+                        className="mt-1 block whitespace-pre-wrap break-words"
+                      />
                     )}
                   </span>
                 ) : m.type === "text" || m.type === "template" ? (
-                  <span className="whitespace-pre-wrap break-words">
-                    {m.text}
-                  </span>
+                  <WhatsAppText
+                    text={m.text}
+                    className="whitespace-pre-wrap break-words"
+                  />
                 ) : (
                   <span className="inline-flex items-center gap-1.5 text-text-3">
                     <Paperclip className="h-3.5 w-3.5" strokeWidth={1.7} />
