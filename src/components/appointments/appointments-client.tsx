@@ -158,44 +158,49 @@ export function AppointmentsClient({
 
             {!loading && !error && groups.length > 0 && (
               <div className="space-y-6">
-                {groups.map(([day, items]) => (
-                  <section key={day}>
-                    <h3 className="mb-2 text-sm font-bold capitalize">
-                      {dayLabel(items[0].start, timezone)}
-                    </h3>
-                    <div className="divide-y divide-border rounded-md border border-border">
-                      {items.map((appointment) => (
-                        <div
-                          key={appointment.id}
-                          className="flex flex-wrap items-center gap-3 px-4 py-3"
-                        >
-                          <div className="w-28 shrink-0 text-sm font-semibold">
-                            {timeLabel(appointment.start, timezone)}
+                {groups.map(([day, items]) => {
+                  const first = items[0];
+                  if (!first) return null;
+
+                  return (
+                    <section key={day}>
+                      <h3 className="mb-2 text-sm font-bold capitalize">
+                        {dayLabel(first.start, timezone)}
+                      </h3>
+                      <div className="divide-y divide-border rounded-md border border-border">
+                        {items.map((appointment) => (
+                          <div
+                            key={appointment.id}
+                            className="flex flex-wrap items-center gap-3 px-4 py-3"
+                          >
+                            <div className="w-28 shrink-0 text-sm font-semibold">
+                              {timeLabel(appointment.start, timezone)}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-semibold">
+                                {appointment.title || "Cita"}
+                              </p>
+                              <p className="text-xs text-text-3">
+                                {timeLabel(appointment.start, timezone)} –{" "}
+                                {timeLabel(appointment.end, timezone)}
+                              </p>
+                            </div>
+                            {(appointment.htmlLink || googleCalendarUrl) && (
+                              <a
+                                href={appointment.htmlLink || googleCalendarUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-xs font-semibold text-brand-text hover:underline"
+                              >
+                                Abrir
+                              </a>
+                            )}
                           </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-semibold">
-                              {appointment.title || "Cita"}
-                            </p>
-                            <p className="text-xs text-text-3">
-                              {timeLabel(appointment.start, timezone)} –{" "}
-                              {timeLabel(appointment.end, timezone)}
-                            </p>
-                          </div>
-                          {(appointment.htmlLink || googleCalendarUrl) && (
-                            <a
-                              href={appointment.htmlLink || googleCalendarUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-xs font-semibold text-brand-text hover:underline"
-                            >
-                              Abrir
-                            </a>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                ))}
+                        ))}
+                      </div>
+                    </section>
+                  );
+                })}
               </div>
             )}
           </CardContent>
