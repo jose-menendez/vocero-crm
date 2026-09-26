@@ -35,6 +35,7 @@ export default async function AppLayout({
       // prop, igual que los canales de la Bandeja. El nav es un componente de
       // cliente: no puede —ni debe— leer variables de entorno.
       agenda={agendaEnabled()}
+      externalCalendar={Boolean(process.env.N8N_CALENDAR_FEED_URL?.trim())}
     >
       {children}
     </AppShell>

@@ -56,6 +56,12 @@ const AGENDA_ITEM: NavItem = {
   icon: CalendarDays,
 };
 
+const EXTERNAL_CALENDAR_ITEM: NavItem = {
+  href: "/appointments",
+  label: "Citas",
+  icon: CalendarDays,
+};
+
 /**
  * Un renglón del menú, como el `side-item` del mockup de la landing: texto
  * semibold, esquinas de 9px y, activo, lavado del acento con tinta azul.
@@ -80,6 +86,7 @@ export function AppNav({
   theme,
   commit,
   agenda = false,
+  externalCalendar = false,
   open = false,
   onClose,
 }: {
@@ -99,6 +106,8 @@ export function AppNav({
    * todavía debe ver la entrada igual.
    */
   agenda?: boolean;
+  /** Google Calendar real mostrado desde n8n; tiene prioridad sobre Agenda nativa. */
+  externalCalendar?: boolean;
   /** Solo aplica por debajo de `lg`: en escritorio el lateral es fijo. */
   open?: boolean;
   onClose?: () => void;
@@ -127,10 +136,15 @@ export function AppNav({
 
   const version = commit ?? { commit: BUILD_COMMIT, verified: BUILD_COMMIT !== "" };
   const settingsActive = pathname.startsWith("/settings");
-  // Citas va después de Pipeline: es el paso siguiente de un trato, no una
-  // sección aparte.
-  const items = agenda
-    ? [...NAV.slice(0, 2), AGENDA_ITEM, ...NAV.slice(2)]
+  // Citas va después de Pipeline. Si existe la vista externa, Google Calendar
+  // sigue siendo la fuente de verdad y no se muestra a la vez el motor nativo.
+  const appointmentsItem = externalCalendar
+    ? EXTERNAL_CALENDAR_ITEM
+    : agenda
+      ? AGENDA_ITEM
+      : null;
+  const items = appointmentsItem
+    ? [...NAV.slice(0, 2), appointmentsItem, ...NAV.slice(2)]
     : NAV;
 
   return (
