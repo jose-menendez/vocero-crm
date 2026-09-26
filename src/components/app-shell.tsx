@@ -28,6 +28,7 @@ export function AppShell({
   theme,
   commit,
   agenda = false,
+  externalCalendar = false,
   children,
 }: {
   branding: Branding;
@@ -38,6 +39,8 @@ export function AppShell({
   commit?: ResolvedCommit;
   /** 015 — ¿esta instancia tiene agenda? Lo decide el servidor. */
   agenda?: boolean;
+  /** Vista read-only del Google Calendar real, alimentada por n8n. */
+  externalCalendar?: boolean;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -76,6 +79,7 @@ export function AppShell({
         role={role}
         theme={theme}
         agenda={agenda}
+        externalCalendar={externalCalendar}
         open={navOpen}
         onClose={() => setNavOpen(false)}
       />
