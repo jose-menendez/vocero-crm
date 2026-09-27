@@ -10,7 +10,36 @@ export const dynamic = "force-dynamic";
 const bodySchema = z.object({
   conversationId: z.string().min(1),
   text: z.string().min(1).max(4096),
+  /**
+   * Idempotencia del cerebro externo. Para WhatsApp usamos el ID del mensaje
+   * entrante que originó esta respuesta. Si Meta/n8n entrega el mismo evento
+   * varias veces en paralelo, solo el primer request toca Graph.
+   */
+  idempotencyKey: z.string().min(1).max(255).optional(),
 });
+
+type Delivery = { messageId: string };
+
+type DeliveryClaim = {
+  expiresAt: number;
+  promise: Promise<Delivery>;
+};
+
+const globalClaims = globalThis as typeof globalThis & {
+  __voceroBotDeliveryClaims?: Map<string, DeliveryClaim>;
+};
+
+const deliveryClaims =
+  globalClaims.__voceroBotDeliveryClaims ??
+  (globalClaims.__voceroBotDeliveryClaims = new Map<string, DeliveryClaim>());
+
+const CLAIM_TTL_MS = 15 * 60_000;
+
+function pruneClaims(now: number) {
+  for (const [key, claim] of deliveryClaims) {
+    if (claim.expiresAt <= now) deliveryClaims.delete(key);
+  }
+}
 
 /**
  * Envío del cerebro externo A TRAVÉS del CRM: el token de WhatsApp nunca sale
@@ -57,13 +86,42 @@ export async function POST(req: Request) {
   }
 
   try {
-    const result = await sendText({
-      conversationId: body.data.conversationId,
-      organizationId,
-      text: body.data.text,
-      aiGenerated: true,
+    const deliver = () =>
+      sendText({
+        conversationId: body.data.conversationId,
+        organizationId,
+        text: body.data.text,
+        aiGenerated: true,
+      });
+
+    if (!body.data.idempotencyKey) {
+      const result = await deliver();
+      return Response.json({ messageId: result.messageId, deduplicated: false });
+    }
+
+    const now = Date.now();
+    pruneClaims(now);
+    const claimKey =
+      organizationId + ":" + body.data.conversationId + ":" + body.data.idempotencyKey;
+
+    const existing = deliveryClaims.get(claimKey);
+    if (existing && existing.expiresAt > now) {
+      const result = await existing.promise;
+      return Response.json({ messageId: result.messageId, deduplicated: true });
+    }
+
+    const promise = deliver().catch((err) => {
+      // Un fallo real puede reintentarse manualmente; no quemamos la clave.
+      deliveryClaims.delete(claimKey);
+      throw err;
     });
-    return Response.json({ messageId: result.messageId });
+    deliveryClaims.set(claimKey, {
+      expiresAt: now + CLAIM_TTL_MS,
+      promise,
+    });
+
+    const result = await promise;
+    return Response.json({ messageId: result.messageId, deduplicated: false });
   } catch (err) {
     if (err instanceof SendError) {
       if (err.code === "window_closed") {
