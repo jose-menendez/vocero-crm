@@ -93,6 +93,31 @@ export function InboxClient({ channels }: { channels: readonly Channel[] }) {
     void refetchConversations();
   }, [refetchConversations]);
 
+  /**
+   * Los adjuntos entrantes se publican por SSE apenas se registra el mensaje,
+   * mientras el binario todavía puede estar descargándose desde Meta. Esa
+   * descarga termina en segundo plano y no genera otro evento SSE, así que sin
+   * este refresco la burbuja podía quedarse en "descargando…" hasta recargar
+   * toda la página.
+   *
+   * Mientras haya media pendiente en la conversación abierta, vuelve a pedir
+   * el hilo. En cuanto el servidor marque el asset available/failed, el efecto
+   * deja de programarse solo.
+   */
+  useEffect(() => {
+    if (!selectedId) return;
+    const hasPendingMedia = messages.some(
+      (message) => message.media?.fetchStatus === "pending"
+    );
+    if (!hasPendingMedia) return;
+
+    const timer = window.setTimeout(() => {
+      void refetchMessages(selectedId);
+    }, 1000);
+
+    return () => window.clearTimeout(timer);
+  }, [messages, selectedId, refetchMessages]);
+
   const select = useCallback(
     (id: string) => {
       setSelectedId(id);
